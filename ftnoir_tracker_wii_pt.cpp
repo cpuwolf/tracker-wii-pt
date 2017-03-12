@@ -99,6 +99,9 @@ void Tracker_WII_PT::run() {
 	m_pDev->CallbackTriggerFlags = (state_change_flags)(CONNECTED |
 		EXTENSION_CHANGED |
 		MOTIONPLUS_CHANGED);
+
+	//create a blank frame
+	cv::Mat blank_frame(preview_size.width(), preview_size.height(), CV_8UC3, cv::Scalar(0, 0, 0));
 reconnect:
 	qDebug() << "wii wait";
 	while (!m_pDev->Connect(wiimote::FIRST_AVAILABLE)) {
@@ -132,34 +135,60 @@ reconnect:
 			goto reconnect;
 		}
 
+		points.clear();
 		for (unsigned index = 0; index < 4; index++)
 		{
 			wiimote_state::ir::dot &dot = m_pDev->IR.Dot[index];
+			if (dot.bVisible) {
+				//qDebug() << "wii:" << dot.RawX << "+" << dot.RawY;
+				vec2 dt(dot.RawX, dot.RawY);
+				//vec2 dt(10.0, 10.0);
+				points.push_back(dt);
+			}
 		}
 
-		//create a blank frame
-		cv::Mat blank_frame(1024, 768, CV_8UC3, cv::Scalar(0, 0, 0));
-#if 0
+		
+		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
+
+		//define a temp function
+		auto fun = [&](const vec2& p, const cv::Scalar& color,int thinkness=1)
 		{
 			static constexpr int len = 9;
 
-			cv::Point p2(iround(p[0] * preview_frame.cols + preview_frame.cols / 2),
-				iround(-p[1] * preview_frame.cols + preview_frame.rows / 2));
+			//cv::Point p2(iround(p[0] * preview_frame.cols + preview_frame.cols / 2),
+			//	iround(-p[1] * preview_frame.cols + preview_frame.rows / 2));
+			cv::Point p2(iround(p[0]* preview_frame.cols/1024), iround(p[1] * preview_frame.rows / 768));
 			cv::line(preview_frame,
 				cv::Point(p2.x - len, p2.y),
 				cv::Point(p2.x + len, p2.y),
 				color,
-				1);
+				thinkness);
 			cv::line(preview_frame,
 				cv::Point(p2.x, p2.y - len),
 				cv::Point(p2.x, p2.y + len),
 				color,
-				1);
+				thinkness);
 		};
-#endif
-		cv::resize(blank_frame, frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
 
-		video_widget->update_image(frame);
+		bool dot_sizes = (m_pDev->IR.Mode == wiimote_state::ir::EXTENDED);
+		bool image_up = false;
+
+		for (unsigned index = 0; index < 4; index++)
+		{
+			wiimote_state::ir::dot &dot = m_pDev->IR.Dot[index];
+			if (dot.bVisible) {
+				//qDebug() << "wii:" << dot.RawX << "+" << dot.RawY;
+				image_up = true;
+				vec2 dt(dot.RawX, dot.RawY);
+				if(dot_sizes)
+					fun(dt, cv::Scalar(0, 255, 0), dot.Size);
+				else
+					fun(dt, cv::Scalar(0, 255, 0));
+			}
+		}
+
+		if(image_up)
+			video_widget->update_image(preview_frame);
 
 		//if(m_pDev->Nunchuk.Acceleration.Orientation.UpdateAge > 10)
 		//{

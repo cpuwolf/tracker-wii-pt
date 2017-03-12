@@ -14,6 +14,8 @@ wiiv_video_widget::wiiv_video_widget(QWidget* parent) :
 {
     connect(&timer, SIGNAL(timeout()), this, SLOT(update_and_repaint()));
     timer.start(65);
+	//setAttribute(Qt::WA_OpaquePaintEvent);
+	setWindowOpacity(1);
 }
 
 void wiiv_video_widget::update_image(const cv::Mat& frame)
@@ -31,6 +33,9 @@ void wiiv_video_widget::update_image(const cv::Mat& frame)
             _frame = cv::Mat(frame.rows, frame.cols, CV_8UC3);
         frame.copyTo(_frame);
         freshp = true;
+
+		texture = QImage((const unsigned char*)frame.data, w, h, QImage::Format_RGB888);
+		return;
 
         if (_frame2.cols != _frame.cols || _frame2.rows != _frame.rows)
             _frame2 = cv::Mat(_frame.rows, _frame.cols, CV_8UC3);

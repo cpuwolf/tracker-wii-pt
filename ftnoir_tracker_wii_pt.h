@@ -17,7 +17,7 @@
 #include "point_extractor.h"
 #include "point_tracker.h"
 #include "compat/timer.hpp"
-#include "cv/video-widget.hpp"
+#include <wiiv/video-widget.hpp>
 #include "compat/util.hpp"
 
 #include <QCoreApplication>
@@ -30,6 +30,7 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+#include <wiiyourself/wiimote.h>
 
 class TrackerDialog_WII_PT;
 
@@ -56,6 +57,12 @@ public slots:
 protected:
     void run() override;
 private:
+	//FIXME: remove runload later
+	void runold();
+	wiimote * m_pDev;
+	static void on_state_change(wiimote &remote,
+		state_change_flags changed,
+		const wiimote_state &new_state);
     // thread commands
     enum Command : unsigned char
     {
@@ -70,7 +77,7 @@ private:
     PointExtractor point_extractor;
     PointTracker   point_tracker;
 
-    qshared<cv_video_widget> video_widget;
+    qshared<wiiv_video_widget> video_widget;
     qshared<QLayout> layout;
 
     settings_pt s;

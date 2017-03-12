@@ -47,7 +47,141 @@ void Tracker_WII_PT::reset_command(Command command)
     commands &= ~command;
 }
 
-void Tracker_WII_PT::run()
+void Tracker_WII_PT::on_state_change(wiimote &remote,
+	state_change_flags  changed,
+	const wiimote_state &new_state)
+{
+	// the wiimote just connected
+	if (changed & CONNECTED)
+	{
+		if (new_state.ExtensionType != wiimote::BALANCE_BOARD)
+		{
+			if (new_state.bExtension)
+				remote.SetReportType(wiimote::IN_BUTTONS_ACCEL_IR_EXT); // no IR dots
+			else
+				remote.SetReportType(wiimote::IN_BUTTONS_ACCEL_IR);		//    IR dots
+		}
+	}
+	// another extension was just connected:
+	else if (changed & EXTENSION_CONNECTED)
+	{
+
+		Beep(1000, 200);
+
+		// switch to a report mode that includes the extension data (we will
+		//  loose the IR dot sizes)
+		// note: there is no need to set report types for a Balance Board.
+		if (!remote.IsBalanceBoard())
+			remote.SetReportType(wiimote::IN_BUTTONS_ACCEL_IR_EXT);
+	}
+	else if (changed & EXTENSION_DISCONNECTED)
+	{
+
+		Beep(200, 300);
+
+		// use a non-extension report mode (this gives us back the IR dot sizes)
+		remote.SetReportType(wiimote::IN_BUTTONS_ACCEL_IR);
+	}
+}
+
+void Tracker_WII_PT::run() {
+
+	BOOL blExitThread = FALSE;
+	unsigned char *pDataSource;
+	MSG msg;
+
+	m_pDev = new wiimote;
+	if (m_pDev == NULL)
+	{
+		return;
+	}
+	m_pDev->ChangedCallback = on_state_change;
+	m_pDev->CallbackTriggerFlags = (state_change_flags)(CONNECTED |
+		EXTENSION_CHANGED |
+		MOTIONPLUS_CHANGED);
+reconnect:
+	qDebug() << "wii wait";
+	while (!m_pDev->Connect(wiimote::FIRST_AVAILABLE)) {
+		if (commands & ABORT)
+			goto goodbye;
+		Beep(500, 30); Sleep(1000);
+	}
+
+	/* wiimote connected */
+	m_pDev->SetLEDs(0x0f);
+	Beep(1000, 300); Sleep(1000);
+
+	m_pDev->SetLEDs(0x01);
+	m_pDev->SetRumble(true);
+	Sleep(1);
+	m_pDev->SetRumble(false);
+
+	qDebug() << "wii connected";
+
+	while ((commands & ABORT) == 0)
+	{
+		while (m_pDev->RefreshState() == NO_CHANGE) {
+				Sleep(1); // don't hog the CPU if nothing changed
+		}
+		if (commands & ABORT)
+			goto goodbye;
+
+		// did we loose the connection?
+		if (m_pDev->ConnectionLost())
+		{
+			goto reconnect;
+		}
+
+		for (unsigned index = 0; index < 4; index++)
+		{
+			wiimote_state::ir::dot &dot = m_pDev->IR.Dot[index];
+		}
+
+		//create a blank frame
+		cv::Mat blank_frame(1024, 768, CV_8UC3, cv::Scalar(0, 0, 0));
+#if 0
+		{
+			static constexpr int len = 9;
+
+			cv::Point p2(iround(p[0] * preview_frame.cols + preview_frame.cols / 2),
+				iround(-p[1] * preview_frame.cols + preview_frame.rows / 2));
+			cv::line(preview_frame,
+				cv::Point(p2.x - len, p2.y),
+				cv::Point(p2.x + len, p2.y),
+				color,
+				1);
+			cv::line(preview_frame,
+				cv::Point(p2.x, p2.y - len),
+				cv::Point(p2.x, p2.y + len),
+				color,
+				1);
+		};
+#endif
+		cv::resize(blank_frame, frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
+
+		video_widget->update_image(frame);
+
+		//if(m_pDev->Nunchuk.Acceleration.Orientation.UpdateAge > 10)
+		//{
+		//--newHeadPose.pitch = m_pDev->Acceleration.Orientation.Pitch;
+		//--newHeadPose.roll = m_pDev->Acceleration.Orientation.Roll;
+		//printf("pitch %f roll %f yaw %f\n",newHeadPose.pitch, newHeadPose.roll, newHeadPose.yaw);
+		//QMessageBox::warning(0,"HeadTrack Error", "pitch and roll",QMessageBox::Ok,QMessageBox::NoButton);
+		//}
+	}
+	// Set event
+goodbye:
+
+	m_pDev->ChangedCallback = NULL;
+	m_pDev->Disconnect();
+	Beep(1000, 200);
+	delete m_pDev;
+	m_pDev = NULL;
+
+	qDebug() << "FTNoIR_Tracker::run() terminated run()";
+}
+
+void Tracker_WII_PT::runold()
 {
     cv::setNumThreads(0);
 
@@ -156,7 +290,7 @@ void Tracker_WII_PT::start_tracker(QFrame* video_frame)
 {
     video_frame->setAttribute(Qt::WA_NativeWindow);
     preview_size = video_frame->size();
-    video_widget = qptr<cv_video_widget>(video_frame);
+    video_widget = qptr<wiiv_video_widget>(video_frame);
     layout = qptr<QHBoxLayout>(video_frame);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(video_widget.data());

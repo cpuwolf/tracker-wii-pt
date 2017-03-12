@@ -5,8 +5,8 @@
  * copyright notice and this permission notice appear in all copies.
  */
 
-#ifndef FTNOIR_TRACKER_PT_DIALOG_H
-#define FTNOIR_TRACKER_PT_DIALOG_H
+#ifndef FTNOIR_Tracker_WII_PT_DIALOG_H
+#define FTNOIR_Tracker_WII_PT_DIALOG_H
 
 #include "api/plugin-api.hpp"
 #include "ftnoir_tracker_wii_pt_settings.h"
@@ -17,11 +17,11 @@
 
 #include <QTimer>
 
-class TrackerDialog_PT : public ITrackerDialog
+class TrackerDialog_WII_PT : public ITrackerDialog
 {
     Q_OBJECT
 public:
-    TrackerDialog_PT();
+    TrackerDialog_WII_PT();
     void register_tracker(ITracker *tracker) override;
     void unregister_tracker() override;
     void save();
@@ -38,11 +38,11 @@ signals:
     void poll_tracker_info();
 private:
     settings_pt s;
-    Tracker_PT* tracker;
+    Tracker_WII_PT* tracker;
     QTimer timer, calib_timer;
     TranslationCalibrator trans_calib;
 
-    Ui::UICPTClientControls ui;
+    Ui::UICWIIPTClientControls ui;
 };
 
-#endif //FTNOIR_TRACKER_PT_DIALOG_H
+#endif //FTNOIR_Tracker_WII_PT_DIALOG_H

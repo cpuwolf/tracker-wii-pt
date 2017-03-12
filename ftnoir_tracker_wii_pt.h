@@ -31,20 +31,20 @@
 #include <memory>
 #include <vector>
 
-class TrackerDialog_PT;
+class TrackerDialog_WII_PT;
 
 namespace impl {
 
 using namespace types;
 
-class Tracker_PT : public QThread, public ITracker
+class Tracker_WII_PT : public QThread, public ITracker
 {
     Q_OBJECT
     friend class camera_dialog;
-    friend class ::TrackerDialog_PT;
+    friend class ::TrackerDialog_WII_PT;
 public:
-    Tracker_PT();
-    ~Tracker_PT() override;
+    Tracker_WII_PT();
+    ~Tracker_WII_PT() override;
     void start_tracker(QFrame* parent_window) override;
     void data(double* data) override;
 
@@ -92,8 +92,8 @@ private:
 
 class PT_metadata : public Metadata
 {
-    QString name() { return QString(QCoreApplication::translate("PT_metadata", "PointTracker 1.1")); }
-    QIcon icon() { return QIcon(":/Resources/Logo_IR.png"); }
+    QString name() { return QString(QCoreApplication::translate("PT_metadata", "WiiPointTracker 1.0")); }
+    QIcon icon() { return QIcon(":/Resources/wii.png"); }
 };
 
-using impl::Tracker_PT;
+using impl::Tracker_WII_PT;

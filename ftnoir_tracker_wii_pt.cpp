@@ -18,7 +18,7 @@
 //#define PT_PERF_LOG	//log performance
 
 //-----------------------------------------------------------------------------
-Tracker_PT::Tracker_PT() :
+Tracker_WII_PT::Tracker_WII_PT() :
       point_count(0),
       commands(0),
       ever_success(false)
@@ -26,7 +26,7 @@ Tracker_PT::Tracker_PT() :
     connect(s.b.get(), SIGNAL(saving()), this, SLOT(apply_settings()), Qt::DirectConnection);
 }
 
-Tracker_PT::~Tracker_PT()
+Tracker_WII_PT::~Tracker_WII_PT()
 {
     set_command(ABORT);
     wait();
@@ -35,19 +35,19 @@ Tracker_PT::~Tracker_PT()
     camera.stop();
 }
 
-void Tracker_PT::set_command(Command command)
+void Tracker_WII_PT::set_command(Command command)
 {
     //QMutexLocker lock(&mutex);
     commands |= command;
 }
 
-void Tracker_PT::reset_command(Command command)
+void Tracker_WII_PT::reset_command(Command command)
 {
     //QMutexLocker lock(&mutex);
     commands &= ~command;
 }
 
-void Tracker_PT::run()
+void Tracker_WII_PT::run()
 {
     cv::setNumThreads(0);
 
@@ -135,7 +135,7 @@ void Tracker_PT::run()
     qDebug() << "pt: thread stopped";
 }
 
-void Tracker_PT::apply_settings()
+void Tracker_WII_PT::apply_settings()
 {
     qDebug() << "pt: applying settings";
 
@@ -152,7 +152,7 @@ void Tracker_PT::apply_settings()
     qDebug() << "pt: done applying settings";
 }
 
-void Tracker_PT::start_tracker(QFrame* video_frame)
+void Tracker_WII_PT::start_tracker(QFrame* video_frame)
 {
     video_frame->setAttribute(Qt::WA_NativeWindow);
     preview_size = video_frame->size();
@@ -166,7 +166,7 @@ void Tracker_PT::start_tracker(QFrame* video_frame)
     start();
 }
 
-void Tracker_PT::data(double *data)
+void Tracker_WII_PT::data(double *data)
 {
     if (ever_success)
     {
@@ -219,19 +219,19 @@ void Tracker_PT::data(double *data)
     }
 }
 
-Affine Tracker_PT::pose()
+Affine Tracker_WII_PT::pose()
 {
     QMutexLocker l(&data_mtx);
 
     return point_tracker.pose();
 }
 
-int Tracker_PT::get_n_points()
+int Tracker_WII_PT::get_n_points()
 {
     return int(point_count);
 }
 
-bool Tracker_PT::get_cam_info(CamInfo* info)
+bool Tracker_WII_PT::get_cam_info(CamInfo* info)
 {
     QMutexLocker lock(&camera_mtx);
 
@@ -239,5 +239,5 @@ bool Tracker_PT::get_cam_info(CamInfo* info)
 }
 
 #include "ftnoir_tracker_wii_pt_dialog.h"
-OPENTRACK_DECLARE_TRACKER(Tracker_PT, TrackerDialog_PT, PT_metadata)
+OPENTRACK_DECLARE_TRACKER(Tracker_WII_PT, TrackerDialog_WII_PT, PT_metadata)
 

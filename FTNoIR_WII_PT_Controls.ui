@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>UICPTClientControls</class>
- <widget class="QWidget" name="UICPTClientControls">
+ <class>UICWIIPTClientControls</class>
+ <widget class="QWidget" name="UICWIIPTClientControls">
   <property name="windowModality">
    <enum>Qt::NonModal</enum>
   </property>
@@ -20,11 +20,11 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>PointTracker Settings</string>
+   <string>Wii PointTracker Settings</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="ftnoir_tracker_pt.qrc">
-    <normaloff>:/Resources/Logo_IR.png</normaloff>:/Resources/Logo_IR.png</iconset>
+   <iconset resource="ftnoir_tracker_wii_pt.qrc">
+    <normaloff>:/Resources/wii.png</normaloff>:/Resources/wii.png</iconset>
   </property>
   <property name="layoutDirection">
    <enum>Qt::LeftToRight</enum>
@@ -512,7 +512,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="ftnoir_tracker_pt.qrc">:/Resources/clip_side.png</pixmap>
+               <pixmap resource="ftnoir_tracker_wii_pt.qrc">:/Resources/clip_side.png</pixmap>
               </property>
              </widget>
              <widget class="QLabel" name="label_50">
@@ -592,7 +592,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="ftnoir_tracker_pt.qrc">:/Resources/clip_front.png</pixmap>
+               <pixmap resource="ftnoir_tracker_wii_pt.qrc">:/Resources/clip_front.png</pixmap>
               </property>
              </widget>
             </widget>
@@ -628,7 +628,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="ftnoir_tracker_pt.qrc">:/Resources/cap_side.png</pixmap>
+               <pixmap resource="ftnoir_tracker_wii_pt.qrc">:/Resources/cap_side.png</pixmap>
               </property>
              </widget>
              <widget class="QLabel" name="label_48">
@@ -676,7 +676,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="ftnoir_tracker_pt.qrc">:/Resources/cap_front.png</pixmap>
+               <pixmap resource="ftnoir_tracker_wii_pt.qrc">:/Resources/cap_front.png</pixmap>
               </property>
              </widget>
              <widget class="QSpinBox" name="cap_width_spin">
@@ -1113,7 +1113,7 @@
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap resource="ftnoir_tracker_pt.qrc">:/Resources/Logo_IR.png</pixmap>
+          <pixmap resource="ftnoir_tracker_wii_pt.qrc">:/Resources/Logo_IR.png</pixmap>
          </property>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -1237,7 +1237,8 @@
   <tabstop>tz_spin</tabstop>
  </tabstops>
  <resources>
-  <include location="ftnoir_tracker_pt.qrc"/>
+  <include location="ftnoir_tracker_wii_pt.qrc"/>
+  <include location="ftnoir_tracker_wii_pt.qrc"/>
  </resources>
  <connections/>
  <slots>

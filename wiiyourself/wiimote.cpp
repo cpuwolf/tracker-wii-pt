@@ -320,7 +320,7 @@ bool wiimote::Connect (unsigned wiimote_index, bool force_hidwrites)
 			//  library can no longer detect if you've already connected a device
 			//  and will allow you to connect it twice!  So be careful ...
 			Handle = CreateFile(didetail->DevicePath, GENERIC_READ|GENERIC_WRITE,
-													FILE_SHARE_READ,
+													FILE_SHARE_READ| FILE_SHARE_WRITE,
 													NULL, OPEN_EXISTING,
 													FILE_FLAG_OVERLAPPED, NULL);
 			if(Handle == INVALID_HANDLE_VALUE) {

@@ -317,14 +317,14 @@ int PointTracker::POSIT(const PointModel& model, const PointOrder& order, f foca
         for (int j = 0; j < 3; j++)
             if (nanp(r(i, j)))
             {
-                qDebug() << "posit nan";
+                //qDebug() << "posit nan";
                 return -1;
             }
 
     for (unsigned i = 0; i < 3; i++)
         if (nanp(t[i]))
         {
-            qDebug() << "posit nan";
+            //qDebug() << "posit nan";
             return -1;
         }
 

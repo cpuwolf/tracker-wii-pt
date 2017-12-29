@@ -4,16 +4,16 @@
 <context>
     <name>PT_metadata</name>
     <message>
-        <location filename="../ftnoir_tracker_wii_pt.h" line="+95"/>
-        <source>PointTracker 1.1</source>
+        <location filename="../ftnoir_tracker_wii_pt.h" line="+102"/>
+        <source>WiiPointTracker 1.0</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
-    <name>UICPTClientControls</name>
+    <name>UICWIIPTClientControls</name>
     <message>
         <location filename="../FTNoIR_WII_PT_Controls.ui" line="+23"/>
-        <source>PointTracker Settings</source>
+        <source>Wii PointTracker Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

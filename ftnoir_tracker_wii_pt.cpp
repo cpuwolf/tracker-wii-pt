@@ -118,6 +118,7 @@ reconnect:
 	m_pDev->SetRumble(true);
 	Sleep(1);
 	m_pDev->SetRumble(false);
+	
 
 	qDebug() << "wii connected";
 
@@ -134,30 +135,34 @@ reconnect:
 		{
 			goto reconnect;
 		}
-
+#if 0
 		points.clear();
 		for (unsigned index = 0; index < 4; index++)
 		{
 			wiimote_state::ir::dot &dot = m_pDev->IR.Dot[index];
 			if (dot.bVisible) {
 				//qDebug() << "wii:" << dot.RawX << "+" << dot.RawY;
-				vec2 dt(dot.RawX, dot.RawY);
+				vec2 dt(dot.RawX/1024.0, dot.RawY/768.0);
 				//vec2 dt(10.0, 10.0);
 				points.push_back(dt);
 			}
 		}
 
-		
+#endif	
+		CamInfo cam_info;
+		camera.get_frame(1.0, frame, cam_info);
+
+		//create preview video frame
 		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
 
-		//define a temp function
+		//define a temp draw function
 		auto fun = [&](const vec2& p, const cv::Scalar& color,int thinkness=1)
 		{
 			static constexpr int len = 9;
 
-			//cv::Point p2(iround(p[0] * preview_frame.cols + preview_frame.cols / 2),
-			//	iround(-p[1] * preview_frame.cols + preview_frame.rows / 2));
-			cv::Point p2(iround(p[0]* preview_frame.cols/1024), iround(p[1] * preview_frame.rows / 768));
+			cv::Point p2(iround(p[0] * preview_frame.cols + preview_frame.cols / 2),
+				iround(-p[1] * preview_frame.cols + preview_frame.rows / 2));
+			//cv::Point p2(iround(p[0]* preview_frame.cols/1024), iround(p[1] * preview_frame.rows / 768));
 			cv::line(preview_frame,
 				cv::Point(p2.x - len, p2.y),
 				cv::Point(p2.x + len, p2.y),
@@ -172,6 +177,8 @@ reconnect:
 
 		bool dot_sizes = (m_pDev->IR.Mode == wiimote_state::ir::EXTENDED);
 		bool image_up = false;
+		points.reserve(4);
+		points.clear();
 
 		for (unsigned index = 0; index < 4; index++)
 		{
@@ -179,14 +186,35 @@ reconnect:
 			if (dot.bVisible) {
 				//qDebug() << "wii:" << dot.RawX << "+" << dot.RawY;
 				image_up = true;
-				vec2 dt(dot.RawX, dot.RawY);
+				//vec2 dt(dot.RawX, dot.RawY);
+				vec2 dt((dot.RawX/1024.0f)-0.5f, ((-2.0f*dot.RawY)+768.0f)/(2.0f*1024.0f));
+				//vec2 dt((dot.RawX / 1024.0f) - 0.5f, (dot.RawY / 768.0f) - 0.5f);
+
+				points.push_back(dt);
 				if(dot_sizes)
 					fun(dt, cv::Scalar(0, 255, 0), dot.Size);
 				else
 					fun(dt, cv::Scalar(0, 255, 0));
 			}
 		}
+		const bool success = points.size() >= PointModel::N_POINTS;
+		point_count = points.size();
 
+#if 0
+		CamInfo cam_info;
+		cam_info.fps = 50;
+		cam_info.res_x = 1024;
+		cam_info.res_y = 768;
+		cam_info.fov = 56;
+#endif
+		if (success)
+		{
+			point_tracker.track(points,
+				PointModel(s),
+				cam_info,
+				s.dynamic_pose ? s.init_phase_timeout : 0);
+			ever_success = true;
+		}
 		if(image_up)
 			video_widget->update_image(preview_frame);
 
@@ -291,6 +319,8 @@ void Tracker_WII_PT::runold()
                 vec2 p_(p[0] / p[2] * fx, p[1] / p[2] * fx);  // projected to screen
                 fun(p_, cv::Scalar(0, 0, 255));
             }
+
+			
 
             video_widget->update_image(preview_frame);
         }

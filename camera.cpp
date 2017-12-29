@@ -41,12 +41,14 @@ DEFUN_WARN_UNUSED bool Camera::get_info(CamInfo& ret) const
 {
     if (cam_info.res_x == 0 || cam_info.res_y == 0)
         return false;
+
     ret = cam_info;
     return true;
 }
 
-DEFUN_WARN_UNUSED bool Camera::get_frame(double dt, cv::Mat& frame, CamInfo& info)
+DEFUN_WARN_UNUSED bool Camera::get_frame(double dt, cv::Mat& frame, CamInfo& info) 
 {
+#if 0
     bool new_frame = _get_frame(frame);
 
     // measure fps of valid frames
@@ -65,14 +67,22 @@ DEFUN_WARN_UNUSED bool Camera::get_frame(double dt, cv::Mat& frame, CamInfo& inf
         cam_info.res_x = frame.cols;
         cam_info.res_y = frame.rows;
         cam_info.fov = s.fov;
+#endif
+		cam_info.fps = 50;
+		cam_info.res_x = 1024;
+		cam_info.res_y = 768;
+		cam_info.fov = 56;
 
         info = cam_info;
+		return true;
+#if 0
 
         dt_valid = 0;
     }
     else
         qDebug() << "pt camera: can't get frame";
     return new_frame;
+#endif
 }
 
 DEFUN_WARN_UNUSED bool Camera::start(int idx, int fps, int res_x, int res_y)

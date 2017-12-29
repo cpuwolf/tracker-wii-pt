@@ -37,9 +37,9 @@ struct settings_pt : opts
     settings_pt() :
         opts("tracker-pt"),
         camera_name(b, "camera-name", ""),
-        cam_res_x(b, "camera-res-width", 640),
-        cam_res_y(b, "camera-res-height", 480),
-        cam_fps(b, "camera-fps", 30),
+        cam_res_x(b, "camera-res-width", 1024),
+        cam_res_y(b, "camera-res-height", 768),
+        cam_fps(b, "camera-fps", 70),
         threshold(b, "threshold-primary", 128),
         min_point_size(b, "min-point-size", 1),
         max_point_size(b, "max-point-size", 50),

@@ -207,6 +207,8 @@ reconnect:
 		cam_info.res_y = 768;
 		cam_info.fov = 56;
 #endif
+		f fx;
+		cam_info.get_focal_length(fx);
 		if (success)
 		{
 			point_tracker.track(points,
@@ -215,6 +217,21 @@ reconnect:
 				s.dynamic_pose ? s.init_phase_timeout : 0);
 			ever_success = true;
 		}
+
+		{
+			Affine X_CM;
+			{
+				QMutexLocker l(&data_mtx);
+				X_CM = point_tracker.pose();
+			}
+
+			Affine X_MH(mat33::eye(), vec3(s.t_MH_x, s.t_MH_y, s.t_MH_z)); // just copy pasted these lines from below
+			Affine X_GH = X_CM * X_MH;
+			vec3 p = X_GH.t; // head (center?) position in global space
+			vec2 p_(p[0] / p[2] * fx, p[1] / p[2] * fx);  // projected to screen
+			fun(p_, cv::Scalar(0, 0, 255));
+		}
+
 		if(image_up)
 			video_widget->update_image(preview_frame);
 

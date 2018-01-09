@@ -35,7 +35,7 @@ struct settings_pt : opts
     value<bool> auto_threshold;
 
     settings_pt() :
-        opts("tracker-pt"),
+        opts("tracker-wii-pt"),
         camera_name(b, "camera-name", ""),
         cam_res_x(b, "camera-res-width", 1024),
         cam_res_y(b, "camera-res-height", 768),

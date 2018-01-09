@@ -71,7 +71,7 @@ DEFUN_WARN_UNUSED bool Camera::get_frame(double dt, cv::Mat& frame, CamInfo& inf
 		cam_info.fps = 50;
 		cam_info.res_x = 1024;
 		cam_info.res_y = 768;
-		cam_info.fov = 56;
+		cam_info.fov = 40;
 
         info = cam_info;
 		return true;

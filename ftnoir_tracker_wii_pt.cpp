@@ -32,7 +32,7 @@ Tracker_WII_PT::~Tracker_WII_PT()
     wait();
 
     QMutexLocker l(&camera_mtx);
-    camera.stop();
+    //camera.stop();
 }
 
 void Tracker_WII_PT::set_command(Command command)
@@ -107,17 +107,14 @@ reconnect:
 	while (!m_pDev->Connect(wiimote::FIRST_AVAILABLE)) {
 		if (commands & ABORT)
 			goto goodbye;
-		Beep(500, 30); Sleep(1000);
+		Beep(500, 30); Sleep(500);
 	}
 
 	/* wiimote connected */
 	m_pDev->SetLEDs(0x0f);
-	Beep(1000, 300); Sleep(1000);
+	Beep(1000, 300); Sleep(500);
 
-	m_pDev->SetLEDs(0x01);
-	m_pDev->SetRumble(true);
-	Sleep(1);
-	m_pDev->SetRumble(false);
+	//m_pDev->SetRumble(true);
 	
 
 	qDebug() << "wii connected";
@@ -155,6 +152,27 @@ reconnect:
 		//create preview video frame
 		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
 
+		//draw battery status
+		cv::line(preview_frame,
+				cv::Point(0, 0),
+				cv::Point(preview_frame.cols*m_pDev->BatteryPercent/100, 0),
+				(m_pDev->bBatteryDrained?cv::Scalar(255,0, 0): cv::Scalar(0, 255, 0)),
+				2);
+
+		//draw horizon
+		using std::tan;
+		if(m_pDev->Nunchuk.Acceleration.Orientation.UpdateAge < 10)
+		{
+			//--newHeadPose.pitch = m_pDev->Acceleration.Orientation.Pitch;
+			//--newHeadPose.roll = m_pDev->Acceleration.Orientation.Roll;
+			float delta = preview_frame.cols / 2 * tan((m_pDev->Acceleration.Orientation.Roll)* M_PI / 180.0f);
+			cv::line(preview_frame,
+				cv::Point(0, preview_frame.rows / 2+delta),
+				cv::Point(preview_frame.cols, preview_frame.rows / 2-delta),
+				 cv::Scalar(255, 255, 255),
+				1);
+		}
+
 		//define a temp draw function
 		auto fun = [&](const vec2& p, const cv::Scalar& color,int thinkness=1)
 		{
@@ -186,9 +204,9 @@ reconnect:
 			if (dot.bVisible) {
 				//qDebug() << "wii:" << dot.RawX << "+" << dot.RawY;
 				image_up = true;
-				//vec2 dt(dot.RawX, dot.RawY);
-				vec2 dt((dot.RawX/1024.0f)-0.5f, ((-2.0f*dot.RawY)+768.0f)/(2.0f*1024.0f));
-				//vec2 dt((dot.RawX / 1024.0f) - 0.5f, (dot.RawY / 768.0f) - 0.5f);
+				//vec2 dt((dot.RawX/1024.0f)-0.5f, ((-2.0f*dot.RawY)+768.0f)/(2.0f*1024.0f));
+				//anti-clockwise rotate
+				vec2 dt(((1024-dot.RawX) / 1024.0f) - 0.5f, ((-2.0f*(768-dot.RawY)) + 768.0f) / (2.0f*1024.0f));
 
 				points.push_back(dt);
 				if(dot_sizes)
@@ -216,6 +234,10 @@ reconnect:
 				cam_info,
 				s.dynamic_pose ? s.init_phase_timeout : 0);
 			ever_success = true;
+			m_pDev->SetRumble(false);
+			m_pDev->SetLEDs(0x0);
+		}else {
+			m_pDev->SetLEDs(4-point_count);
 		}
 
 		{
@@ -235,13 +257,6 @@ reconnect:
 		if(image_up)
 			video_widget->update_image(preview_frame);
 
-		//if(m_pDev->Nunchuk.Acceleration.Orientation.UpdateAge > 10)
-		//{
-		//--newHeadPose.pitch = m_pDev->Acceleration.Orientation.Pitch;
-		//--newHeadPose.roll = m_pDev->Acceleration.Orientation.Roll;
-		//printf("pitch %f roll %f yaw %f\n",newHeadPose.pitch, newHeadPose.roll, newHeadPose.yaw);
-		//QMessageBox::warning(0,"HeadTrack Error", "pitch and roll",QMessageBox::Ok,QMessageBox::NoButton);
-		//}
 	}
 	// Set event
 goodbye:
@@ -356,8 +371,8 @@ void Tracker_WII_PT::apply_settings()
     if (!camera.get_info(info) || frame.rows != info.res_y || frame.cols != info.res_x)
         frame = cv::Mat();
 
-    if (!camera.start(camera_name_to_index(s.camera_name), s.cam_fps, s.cam_res_x, s.cam_res_y))
-        qDebug() << "can't start camera" << s.camera_name;
+    //if (!camera.start(camera_name_to_index(s.camera_name), s.cam_fps, s.cam_res_x, s.cam_res_y))
+    //    qDebug() << "can't start camera" << s.camera_name;
 
     qDebug() << "pt: done applying settings";
 }

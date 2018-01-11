@@ -16,7 +16,8 @@
 
 TrackerDialog_WII_PT::TrackerDialog_WII_PT()
     : tracker(nullptr),
-      timer(this)
+      timer(this),
+	trans_calib(1, 2, 0)
 {
     ui.setupUi(this);
 
@@ -75,7 +76,7 @@ TrackerDialog_WII_PT::TrackerDialog_WII_PT()
     timer.setInterval(250);
 
     connect(&calib_timer, &QTimer::timeout, this, &TrackerDialog_WII_PT::trans_calib_step);
-    calib_timer.setInterval(100);
+    calib_timer.setInterval(35);
 
     poll_tracker_info_impl();
 
@@ -84,6 +85,8 @@ TrackerDialog_WII_PT::TrackerDialog_WII_PT()
 
 void TrackerDialog_WII_PT::startstop_trans_calib(bool start)
 {
+    QMutexLocker l(&calibrator_mutex);
+
     if (start)
     {
         qDebug() << "pt: starting translation calibration";
@@ -92,27 +95,53 @@ void TrackerDialog_WII_PT::startstop_trans_calib(bool start)
         s.t_MH_x = 0;
         s.t_MH_y = 0;
         s.t_MH_z = 0;
+
+        ui.sample_count_display->setText(QString());
     }
     else
     {
         calib_timer.stop();
         qDebug() << "pt: stopping translation calibration";
         {
-            auto tmp = trans_calib.get_estimate();
+            cv::Vec3f tmp;
+            cv::Vec3i nsamples;
+            std::tie(tmp, nsamples) = trans_calib.get_estimate();
             s.t_MH_x = int(tmp[0]);
             s.t_MH_y = int(tmp[1]);
             s.t_MH_z = int(tmp[2]);
+
+            static constexpr int min_yaw_samples = 15;
+            static constexpr int min_pitch_samples = 15;
+            static constexpr int min_samples = min_yaw_samples+min_pitch_samples;
+
+            // Don't bother counting roll samples. Roll calibration is hard enough
+            // that it's a hidden unsupported feature anyway.
+
+            const QString sample_feedback = progn(
+                if (nsamples[0] < min_yaw_samples)
+                    return tr("%1 yaw samples. Yaw more to %2 samples for stable calibration.")
+                        .arg(nsamples[0]).arg(min_yaw_samples);
+                if (nsamples[1] < min_pitch_samples)
+                    return tr("%1 pitch samples. Pitch more to %2 samples for stable calibration.")
+                        .arg(nsamples[1]).arg(min_pitch_samples);
+
+                const unsigned nsamples_total = nsamples[0] + nsamples[1];
+
+                return tr("%1 samples. Over %2, good!").arg(nsamples_total).arg(min_samples);
+            );
+
+            ui.sample_count_display->setText(sample_feedback);
         }
     }
     ui.tx_spin->setEnabled(!start);
     ui.ty_spin->setEnabled(!start);
     ui.tz_spin->setEnabled(!start);
     ui.tcalib_button->setText(progn(
-                                  if (start)
-                                      return QStringLiteral("Stop calibration");
-                                  else
-                                      return QStringLiteral("Start calibration");
-                                  ));
+        if (start)
+          return tr("Stop calibration");
+        else
+          return tr("Start calibration");
+    ));
 }
 
 void TrackerDialog_WII_PT::poll_tracker_info_impl()
@@ -120,16 +149,16 @@ void TrackerDialog_WII_PT::poll_tracker_info_impl()
     CamInfo info;
     if (tracker && tracker->get_cam_info(&info))
     {
-        ui.caminfo_label->setText(QStringLiteral("%1x%2 @ %3 FPS").arg(info.res_x).arg(info.res_y).arg(info.fps));
+        ui.caminfo_label->setText(tr("%1x%2 @ %3 FPS").arg(info.res_x).arg(info.res_y).arg(iround(info.fps)));
 
         // display point info
         const int n_points = tracker->get_n_points();
-        ui.pointinfo_label->setText((n_points == 3 ? QStringLiteral("%1 OK!") : QStringLiteral("%1 BAD!")).arg(n_points));
+        ui.pointinfo_label->setText((n_points == 3 ? tr("%1 OK!") : tr("%1 BAD!")).arg(n_points));
     }
     else
     {
-        ui.caminfo_label->setText(QStringLiteral("Tracker offline"));
-        ui.pointinfo_label->setText(QStringLiteral(""));
+        ui.caminfo_label->setText(tr("Tracker offline"));
+        ui.pointinfo_label->setText(QString());
     }
 }
 
@@ -150,7 +179,9 @@ void TrackerDialog_WII_PT::show_camera_settings()
             cv::VideoCapture& cap = *tracker->camera;
 
             CamInfo info;
-            if (tracker->camera.get_info(info))
+            bool status;
+            std::tie(status, info) = tracker->camera.get_info();
+            if (status)
                 video_property_page::show_from_capture(cap, info.idx);
         }
     }
@@ -160,6 +191,8 @@ void TrackerDialog_WII_PT::show_camera_settings()
 
 void TrackerDialog_WII_PT::trans_calib_step()
 {
+    QMutexLocker l(&calibrator_mutex);
+
     if (tracker)
     {
         Affine X_CM = tracker->pose();

@@ -8,6 +8,7 @@
 
 #include "ftnoir_tracker_wii_pt.h"
 #include "compat/camera-names.hpp"
+#include "compat/math-imports.hpp"
 #include <QHBoxLayout>
 #include <cmath>
 #include <QDebug>
@@ -15,15 +16,16 @@
 #include <QCoreApplication>
 #include <functional>
 
-//#define PT_PERF_LOG	//log performance
-
-//-----------------------------------------------------------------------------
 Tracker_WII_PT::Tracker_WII_PT() :
       point_count(0),
       commands(0),
       ever_success(false)
 {
-    connect(s.b.get(), SIGNAL(saving()), this, SLOT(apply_settings()), Qt::DirectConnection);
+    cv::setBreakOnError(true);
+
+    connect(s.b.get(), SIGNAL(saving()), this, SLOT(maybe_reopen_camera()), Qt::DirectConnection);
+    connect(&s.fov, SIGNAL(valueChanged(int)), this, SLOT(set_fov(int)), Qt::DirectConnection);
+    set_fov(s.fov);
 }
 
 Tracker_WII_PT::~Tracker_WII_PT()
@@ -86,6 +88,8 @@ void Tracker_WII_PT::on_state_change(wiimote &remote,
 
 void Tracker_WII_PT::run() {
 
+	cv::setNumThreads(0);
+
 	BOOL blExitThread = FALSE;
 	unsigned char *pDataSource;
 	MSG msg;
@@ -102,12 +106,25 @@ void Tracker_WII_PT::run() {
 
 	//create a blank frame
 	cv::Mat blank_frame(preview_size.width(), preview_size.height(), CV_8UC3, cv::Scalar(0, 0, 0));
+	char txtbuf[64];
+	sprintf(txtbuf, "%s", "wait for WIImote");
+
 reconnect:
 	qDebug() << "wii wait";
 	while (!m_pDev->Connect(wiimote::FIRST_AVAILABLE)) {
 		if (commands & ABORT)
 			goto goodbye;
 		Beep(500, 30); Sleep(500);
+		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
+		//draw wait text
+		cv::putText(preview_frame,
+			txtbuf,
+			cv::Point(preview_frame.cols / 9, preview_frame.rows / 2),
+			cv::FONT_HERSHEY_SIMPLEX,
+			1,
+			cv::Scalar(255, 255, 255),
+			1);
+		video_widget->update_image(preview_frame);
 	}
 
 	/* wiimote connected */
@@ -132,22 +149,16 @@ reconnect:
 		{
 			goto reconnect;
 		}
-#if 0
-		points.clear();
-		for (unsigned index = 0; index < 4; index++)
-		{
-			wiimote_state::ir::dot &dot = m_pDev->IR.Dot[index];
-			if (dot.bVisible) {
-				//qDebug() << "wii:" << dot.RawX << "+" << dot.RawY;
-				vec2 dt(dot.RawX/1024.0, dot.RawY/768.0);
-				//vec2 dt(10.0, 10.0);
-				points.push_back(dt);
-			}
-		}
-
-#endif	
+	
 		CamInfo cam_info;
-		camera.get_frame(1.0, frame, cam_info);
+		bool new_frame = false;
+
+        {
+            QMutexLocker l(&camera_mtx);
+
+            if (likely(camera))
+                std::tie(new_frame, cam_info) = camera.get_frame(frame);
+        }
 
 		//create preview video frame
 		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
@@ -160,12 +171,12 @@ reconnect:
 				2);
 
 		//draw horizon
-		using std::tan;
+		//using std::tan;
 		if(m_pDev->Nunchuk.Acceleration.Orientation.UpdateAge < 10)
 		{
 			//--newHeadPose.pitch = m_pDev->Acceleration.Orientation.Pitch;
 			//--newHeadPose.roll = m_pDev->Acceleration.Orientation.Roll;
-			float delta = preview_frame.cols / 2 * tan((m_pDev->Acceleration.Orientation.Roll)* M_PI / 180.0f);
+			int delta = iround(preview_frame.cols / 2 * tan((m_pDev->Acceleration.Orientation.Roll)* M_PI / 180.0f));
 			cv::line(preview_frame,
 				cv::Point(0, preview_frame.rows / 2+delta),
 				cv::Point(preview_frame.cols, preview_frame.rows / 2-delta),
@@ -194,7 +205,7 @@ reconnect:
 		};
 
 		bool dot_sizes = (m_pDev->IR.Mode == wiimote_state::ir::EXTENDED);
-		bool image_up = false;
+		bool image_up = true;
 		points.reserve(4);
 		points.clear();
 
@@ -241,18 +252,34 @@ reconnect:
 		}
 
 		{
-			Affine X_CM;
-			{
-				QMutexLocker l(&data_mtx);
-				X_CM = point_tracker.pose();
-			}
+                Affine X_CM;
+                {
+                    QMutexLocker l(&data_mtx);
+                    X_CM = point_tracker.pose();
+                }
 
-			Affine X_MH(mat33::eye(), vec3(s.t_MH_x, s.t_MH_y, s.t_MH_z)); // just copy pasted these lines from below
-			Affine X_GH = X_CM * X_MH;
-			vec3 p = X_GH.t; // head (center?) position in global space
-			vec2 p_(p[0] / p[2] * fx, p[1] / p[2] * fx);  // projected to screen
-			fun(p_, cv::Scalar(0, 0, 255));
-		}
+                // just copy pasted these lines from below
+                Affine X_MH(mat33::eye(), vec3(s.t_MH_x, s.t_MH_y, s.t_MH_z));
+                Affine X_GH = X_CM * X_MH;
+                vec3 p = X_GH.t; // head (center?) position in global space
+                vec2 p_((p[0] * fx) / p[2], (p[1] * fx) / p[2]);  // projected to screen
+
+                static constexpr int len = 9;
+
+                cv::Point p2(iround(p_[0] * preview_frame.cols + preview_frame.cols/2),
+                             iround(-p_[1] * preview_frame.cols + preview_frame.rows/2));
+                static const cv::Scalar color(0, 255, 255);
+                cv::line(preview_frame,
+                         cv::Point(p2.x - len, p2.y),
+                         cv::Point(p2.x + len, p2.y),
+                         color,
+                         1);
+                cv::line(preview_frame,
+                         cv::Point(p2.x, p2.y - len),
+                         cv::Point(p2.x, p2.y + len),
+                         color,
+                         1);
+        }
 
 		if(image_up)
 			video_widget->update_image(preview_frame);
@@ -270,125 +297,54 @@ goodbye:
 	qDebug() << "FTNoIR_Tracker::run() terminated run()";
 }
 
-void Tracker_WII_PT::runold()
+
+
+void Tracker_WII_PT::maybe_reopen_camera()
 {
-    cv::setNumThreads(0);
+    QMutexLocker l(&camera_mtx);
+#if 0
+    Camera::open_status status = camera.start(camera_name_to_index(s.camera_name), s.cam_fps, s.cam_res_x, s.cam_res_y);
 
-#ifdef PT_PERF_LOG
-    QFile log_file(QCoreApplication::applicationDirPath() + "/PointTrackerPerformance.txt");
-    if (!log_file.open(QIODevice::WriteOnly | QIODevice::Text)) return;
-    QTextStream log_stream(&log_file);
-#endif
-
-    apply_settings();
-
-    while((commands & ABORT) == 0)
+    switch (status)
     {
-        const double dt = time.elapsed_seconds();
-        time.start();
-        CamInfo cam_info;
-        bool new_frame;
-
-        {
-            QMutexLocker l(&camera_mtx);
-            new_frame = camera.get_frame(dt, frame, cam_info);
-        }
-
-        cv::resize(frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
-
-        if (new_frame && !frame.empty())
-        {
-            point_extractor.extract_points(frame, preview_frame, points);
-            point_count = points.size();
-
-            f fx;
-            cam_info.get_focal_length(fx);
-
-            const bool success = points.size() >= PointModel::N_POINTS;
-
-            if (success)
-            {
-                point_tracker.track(points,
-                                    PointModel(s),
-                                    cam_info,
-                                    s.dynamic_pose ? s.init_phase_timeout : 0);
-                ever_success = true;
-            }
-
-            auto fun = [&](const vec2& p, const cv::Scalar& color)
-            {
-                static constexpr int len = 9;
-
-                cv::Point p2(iround(p[0] * preview_frame.cols + preview_frame.cols/2),
-                             iround(-p[1] * preview_frame.cols + preview_frame.rows/2));
-                cv::line(preview_frame,
-                         cv::Point(p2.x - len, p2.y),
-                         cv::Point(p2.x + len, p2.y),
-                         color,
-                         1);
-                cv::line(preview_frame,
-                         cv::Point(p2.x, p2.y - len),
-                         cv::Point(p2.x, p2.y + len),
-                         color,
-                         1);
-            };
-
-            for (unsigned i = 0; i < points.size(); i++)
-            {
-                fun(points[i], cv::Scalar(0, 255, 0));
-            }
-
-            {
-                Affine X_CM;
-                {
-                    QMutexLocker l(&data_mtx);
-                    X_CM = point_tracker.pose();
-                }
-
-                Affine X_MH(mat33::eye(), vec3(s.t_MH_x, s.t_MH_y, s.t_MH_z)); // just copy pasted these lines from below
-                Affine X_GH = X_CM * X_MH;
-                vec3 p = X_GH.t; // head (center?) position in global space
-                vec2 p_(p[0] / p[2] * fx, p[1] / p[2] * fx);  // projected to screen
-                fun(p_, cv::Scalar(0, 0, 255));
-            }
-
-			
-
-            video_widget->update_image(preview_frame);
-        }
+    case Camera::open_error:
+        break;
+    case Camera::open_ok_change:
+#endif
+        frame = cv::Mat();
+#if 0
+        break;
+    case Camera::open_ok_no_change:
+        break;
     }
-    qDebug() << "pt: thread stopped";
+#endif
 }
 
-void Tracker_WII_PT::apply_settings()
+void Tracker_WII_PT::set_fov(int value)
 {
-    qDebug() << "pt: applying settings";
-
     QMutexLocker l(&camera_mtx);
-
-    CamInfo info;
-
-    if (!camera.get_info(info) || frame.rows != info.res_y || frame.cols != info.res_x)
-        frame = cv::Mat();
-
-    //if (!camera.start(camera_name_to_index(s.camera_name), s.cam_fps, s.cam_res_x, s.cam_res_y))
-    //    qDebug() << "can't start camera" << s.camera_name;
-
-    qDebug() << "pt: done applying settings";
+    camera.set_fov(value);
 }
 
 void Tracker_WII_PT::start_tracker(QFrame* video_frame)
 {
-    video_frame->setAttribute(Qt::WA_NativeWindow);
+    //video_frame->setAttribute(Qt::WA_NativeWindow);
     preview_size = video_frame->size();
-    video_widget = qptr<wiiv_video_widget>(video_frame);
+
+    preview_frame = cv::Mat(video_frame->height(), video_frame->width(), CV_8UC3);
+    preview_frame.setTo(cv::Scalar(0, 0, 0));
+
+    video_widget = qptr<cv_video_widget>(video_frame);
     layout = qptr<QHBoxLayout>(video_frame);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(video_widget.data());
     video_frame->setLayout(layout.data());
     //video_widget->resize(video_frame->width(), video_frame->height());
     video_frame->show();
-    start();
+
+    maybe_reopen_camera();
+
+    start(QThread::HighPriority);
 }
 
 void Tracker_WII_PT::data(double *data)
@@ -406,12 +362,6 @@ void Tracker_WII_PT::data(double *data)
                    -1, 0, 0,
                    0, 1, 0);
         mat33 R = R_EG *  X_GH.R * R_EG.t();
-
-        using std::atan2;
-        using std::sqrt;
-        using std::atan;
-        using std::fabs;
-        using std::copysign;
 
         // get translation(s)
         const vec3& t = X_GH.t;
@@ -459,8 +409,10 @@ int Tracker_WII_PT::get_n_points()
 bool Tracker_WII_PT::get_cam_info(CamInfo* info)
 {
     QMutexLocker lock(&camera_mtx);
+    bool ret;
 
-    return camera.get_info(*info);
+    std::tie(ret, *info) = camera.get_info();
+    return ret;
 }
 
 #include "ftnoir_tracker_wii_pt_dialog.h"

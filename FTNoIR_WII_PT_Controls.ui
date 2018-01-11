@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>424</width>
-    <height>584</height>
+    <height>588</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -250,7 +250,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Dynamic pose resolution</string>
+             <string>Dynamic pose (for caps only, never clips)</string>
             </property>
            </widget>
           </item>
@@ -968,45 +968,6 @@
              <enum>QFrame::Raised</enum>
             </property>
             <layout class="QGridLayout" name="gridLayout_11">
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_61">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="text">
-                <string>x:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QSpinBox" name="tx_spin">
-               <property name="suffix">
-                <string> mm</string>
-               </property>
-               <property name="minimum">
-                <number>-65535</number>
-               </property>
-               <property name="maximum">
-                <number>65536</number>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_62">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="text">
-                <string>y:</string>
-               </property>
-              </widget>
-             </item>
              <item row="1" column="1">
               <widget class="QSpinBox" name="ty_spin">
                <property name="suffix">
@@ -1046,6 +1007,45 @@
                </property>
               </widget>
              </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_61">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>x:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSpinBox" name="tx_spin">
+               <property name="suffix">
+                <string> mm</string>
+               </property>
+               <property name="minimum">
+                <number>-65535</number>
+               </property>
+               <property name="maximum">
+                <number>65536</number>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_62">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>y:</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
@@ -1061,9 +1061,32 @@
              <item>
               <widget class="QLabel" name="label_59">
                <property name="text">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/opentrack/opentrack/wiki/model-calibration-for-PT-and-Aruco-trackers&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Instructions on the opentrack wiki&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>Use only yaw and pitch while calibrating.
+Don't roll or change position.</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
                <property name="openExternalLinks">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="sample_count_display">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
                 <bool>true</bool>
                </property>
               </widget>
@@ -1124,7 +1147,7 @@
      </widget>
     </widget>
    </item>
-   <item row="2" column="0">
+   <item row="2" column="0" alignment="Qt::AlignVCenter">
     <widget class="QGroupBox" name="groupBox_5">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -1152,10 +1175,16 @@
       </item>
       <item row="1" column="1">
        <widget class="QLabel" name="pointinfo_label">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="minimumSize">
          <size>
-          <width>50</width>
-          <height>0</height>
+          <width>120</width>
+          <height>15</height>
          </size>
         </property>
         <property name="text">
@@ -1166,7 +1195,7 @@
       <item row="0" column="1">
        <widget class="QLabel" name="caminfo_label">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -1174,7 +1203,7 @@
         <property name="minimumSize">
          <size>
           <width>120</width>
-          <height>0</height>
+          <height>15</height>
          </size>
         </property>
         <property name="text">
@@ -1217,15 +1246,21 @@
   <tabstop>res_y_spin</tabstop>
   <tabstop>fps_spin</tabstop>
   <tabstop>fov</tabstop>
+  <tabstop>dynamic_pose</tabstop>
+  <tabstop>init_phase_timeout</tabstop>
+  <tabstop>camera_settings</tabstop>
+  <tabstop>auto_threshold</tabstop>
   <tabstop>threshold_slider</tabstop>
+  <tabstop>mindiam_spin</tabstop>
+  <tabstop>maxdiam_spin</tabstop>
   <tabstop>model_tabs</tabstop>
   <tabstop>clip_tlength_spin</tabstop>
   <tabstop>clip_theight_spin</tabstop>
   <tabstop>clip_bheight_spin</tabstop>
   <tabstop>clip_blength_spin</tabstop>
   <tabstop>cap_length_spin</tabstop>
-  <tabstop>cap_width_spin</tabstop>
   <tabstop>cap_height_spin</tabstop>
+  <tabstop>cap_width_spin</tabstop>
   <tabstop>m1x_spin</tabstop>
   <tabstop>m1y_spin</tabstop>
   <tabstop>m1z_spin</tabstop>
@@ -1235,6 +1270,7 @@
   <tabstop>tx_spin</tabstop>
   <tabstop>ty_spin</tabstop>
   <tabstop>tz_spin</tabstop>
+  <tabstop>tcalib_button</tabstop>
  </tabstops>
  <resources>
   <include location="ftnoir_tracker_wii_pt.qrc"/>

@@ -1,1 +1,1 @@
-opentrack_boilerplate(opentrack-tracker-wii-pt-wiiyourself STATIC)
+otr_module(tracker-wii-pt-wiiyourself STATIC)

@@ -16,10 +16,12 @@
 #include <cmath>
 #include <algorithm>
 #include <cinttypes>
+#include <memory>
 
 #include <QDebug>
 
 using namespace types;
+using namespace pt_impl;
 
 /*
 http://en.wikipedia.org/wiki/Mean-shift
@@ -46,7 +48,7 @@ static cv::Vec2d MeanShiftIteration(const cv::Mat &frame_gray, const cv::Vec2d &
     cv::Vec2d com(0.0, 0.0);
     for (int i = 0; i < frame_gray.rows; i++)
     {
-        auto frame_ptr = (uint8_t *)frame_gray.ptr(i);
+        auto frame_ptr = (uint8_t const * restrict)frame_gray.ptr(i);
         for (int j = 0; j < frame_gray.cols; j++)
         {
             double val = frame_ptr[j];
@@ -54,7 +56,7 @@ static cv::Vec2d MeanShiftIteration(const cv::Mat &frame_gray, const cv::Vec2d &
             {
                 double dx = (j - current_center[0])*s;
                 double dy = (i - current_center[1])*s;
-                double f = std::max(0.0, 1.0 - dx*dx - dy*dy);
+                double f = std::fmax(0.0, 1.0 - dx*dx - dy*dy);
                 val *= f;
             }
             m += val;
@@ -79,19 +81,19 @@ PointExtractor::PointExtractor()
 void PointExtractor::extract_points(const cv::Mat& frame, cv::Mat& preview_frame, std::vector<vec2>& points)
 {
     using std::sqrt;
-    using std::max;
+    using std::fmax;
     using std::round;
     using std::sort;
 
     if (frame_gray.rows != frame.rows || frame_gray.cols != frame.cols)
     {
-        frame_gray = cv::Mat(frame.rows, frame.cols, CV_8U);
-        frame_bin = cv::Mat(frame.rows, frame.cols, CV_8U);
-        frame_blobs = cv::Mat(frame.rows, frame.cols, CV_8U);
+        frame_gray = cv::Mat1b(frame.rows, frame.cols);
+        frame_bin = cv::Mat1b(frame.rows, frame.cols);
+        frame_blobs = cv::Mat1b(frame.rows, frame.cols);
     }
 
     // convert to grayscale
-    cv::cvtColor(frame, frame_gray, cv::COLOR_RGB2GRAY);
+    cv::cvtColor(frame, frame_gray, cv::COLOR_BGR2GRAY);
 
     const double region_size_min = s.min_point_size;
     const double region_size_max = s.max_point_size;
@@ -103,23 +105,30 @@ void PointExtractor::extract_points(const cv::Mat& frame, cv::Mat& preview_frame
     }
     else
     {
-        cv::calcHist(std::vector<cv::Mat> { frame_gray },
-                     std::vector<int> { 0 },
-                     cv::Mat(),
+        int hist_size = 256;
+        float ranges_[] = { 0, 256 };
+        float const* ranges = (float*) ranges_;
+
+        cv::calcHist(&frame_gray,
+                     1,
+                     nullptr,
+                     cv::noArray(),
                      hist,
-                     std::vector<int> { 256 },
-                     std::vector<float> { 0, 256 },
-                     false);
+                     1,
+                     (int const*) &hist_size,
+                     &ranges);
 
-        static constexpr double min_radius = 2.5;
-        static constexpr double max_radius = 15;
+        const double cx = frame.cols / 640., cy = frame.rows / 480.;
 
-        const double radius = max(0., (max_radius-min_radius) * s.threshold / 255 + min_radius);
-        const float* ptr = reinterpret_cast<const float*>(hist.ptr(0));
-        const unsigned area = unsigned(round(3 * M_PI * radius*radius));
+        const double min_radius = 1.75 * cx;
+        const double max_radius = 15 * cy;
+
+        const double radius = fmax(0., (max_radius-min_radius) * s.threshold / 255 + min_radius);
+        float const* restrict ptr = reinterpret_cast<float const* restrict>(hist.ptr(0));
+        const unsigned area = uround(3 * M_PI * radius*radius);
         const unsigned sz = unsigned(hist.cols * hist.rows);
-        unsigned thres = 1;
-        for (unsigned i = sz-1, cnt = 0; i > 1; i--)
+        unsigned thres = 32;
+        for (unsigned i = sz-1, cnt = 0; i > 32; i--)
         {
             cnt += ptr[i];
             if (cnt >= area)
@@ -128,8 +137,6 @@ void PointExtractor::extract_points(const cv::Mat& frame, cv::Mat& preview_frame
                 break;
             }
         }
-        //val *= 240./256.;
-        //qDebug() << "thres" << thres;
 
         cv::threshold(frame_gray, frame_bin, thres, 255, CV_THRESH_BINARY);
     }
@@ -194,14 +201,24 @@ void PointExtractor::extract_points(const cv::Mat& frame, cv::Mat& preview_frame
                 blobs.push_back(b);
 
                 {
+                    static const f offx = 10, offy = 7.5;
+                    const f cx = preview_frame.cols / f(frame.cols),
+                            cy = preview_frame.rows / f(frame.rows),
+                            c_ = (cx+cy)/2;
+
+                    static constexpr unsigned fract_bits = 16;
+                    static constexpr double c_fract(1 << fract_bits);
+
+                    cv::Point p(iround(b.pos[0] * cx * c_fract), iround(b.pos[1] * cy * c_fract));
+
+                    cv::circle(preview_frame, p, iround((b.radius + 2) * c_ * c_fract), cv::Scalar(255, 255, 0), 1, cv::LINE_AA, fract_bits);
+
                     char buf[64];
                     sprintf(buf, "%.2fpx", radius);
-                    static const vec2 off(10, 7.5);
-                    const f cx = preview_frame.cols / f(frame.cols),
-                            cy = preview_frame.rows / f(frame.rows);
+
                     cv::putText(preview_frame,
                                 buf,
-                                cv::Point(iround(b.pos[0]*cx+off[0]), iround(b.pos[1]*cy+off[1])),
+                                cv::Point(iround(b.pos[0]*cx+offx), iround(b.pos[1]*cy+offy)),
                                 cv::FONT_HERSHEY_PLAIN,
                                 1,
                                 cv::Scalar(0, 0, 255),
@@ -234,7 +251,7 @@ end:
 
         // smaller values mean more changes. 1 makes too many changes while 1.5 makes about .1
         // seems values close to 1.3 reduce noise best with about .15->.2 changes
-        static constexpr double radius_c = 1.3;
+        static constexpr double radius_c = 1.5;
 
         const double kernel_radius = b.radius * radius_c;
         cv::Vec2d pos(b.pos[0] - rect.x, b.pos[1] - rect.y); // position relative to ROI.
@@ -244,7 +261,7 @@ end:
             cv::Vec2d com_new = MeanShiftIteration(frame_roi, pos, kernel_radius);
             cv::Vec2d delta = com_new - pos;
             pos = com_new;
-            if (delta.dot(delta) < 1e-3)
+            if (delta.dot(delta) < 1e-2)
                 break;
         }
 
@@ -265,7 +282,7 @@ end:
     }
 }
 
-PointExtractor::blob::blob(double radius, const cv::Vec2d& pos, double brightness, cv::Rect& rect) :
+blob::blob(double radius, const cv::Vec2d& pos, double brightness, cv::Rect& rect) :
     radius(radius), brightness(brightness), pos(pos), rect(rect)
 {
     //qDebug() << "radius" << radius << "pos" << pos[0] << pos[1];

@@ -6,6 +6,11 @@
  * copyright notice and this permission notice appear in all copies.
  */
 
+/*
+ * copyright (c) 2017-2018 Wei Shuai <cpuwolf@gmail.com>
+ * WIImote support
+ */
+
 #include "ftnoir_tracker_wii_pt.h"
 #include "compat/camera-names.hpp"
 #include "compat/math-imports.hpp"
@@ -114,12 +119,12 @@ reconnect:
 	while (!m_pDev->Connect(wiimote::FIRST_AVAILABLE)) {
 		if (commands & ABORT)
 			goto goodbye;
-		Beep(500, 30); Sleep(500);
+		Beep(500, 20); Sleep(2000);
 		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
 		//draw wait text
 		cv::putText(preview_frame,
 			txtbuf,
-			cv::Point(preview_frame.cols / 9, preview_frame.rows / 2),
+			cv::Point(preview_frame.cols / 10, preview_frame.rows / 2),
 			cv::FONT_HERSHEY_SIMPLEX,
 			1,
 			cv::Scalar(255, 255, 255),
@@ -151,14 +156,8 @@ reconnect:
 		}
 	
 		CamInfo cam_info;
-		bool new_frame = false;
 
-        {
-            QMutexLocker l(&camera_mtx);
-
-            if (likely(camera))
-                std::tie(new_frame, cam_info) = camera.get_frame(frame);
-        }
+		get_cam_info(&cam_info);
 
 		//create preview video frame
 		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
@@ -167,20 +166,18 @@ reconnect:
 		cv::line(preview_frame,
 				cv::Point(0, 0),
 				cv::Point(preview_frame.cols*m_pDev->BatteryPercent/100, 0),
-				(m_pDev->bBatteryDrained?cv::Scalar(255,0, 0): cv::Scalar(0, 255, 0)),
+				(m_pDev->bBatteryDrained?cv::Scalar(255,0, 0): cv::Scalar(0, 80, 0)),
 				2);
 
 		//draw horizon
-		//using std::tan;
 		if(m_pDev->Nunchuk.Acceleration.Orientation.UpdateAge < 10)
 		{
-			//--newHeadPose.pitch = m_pDev->Acceleration.Orientation.Pitch;
-			//--newHeadPose.roll = m_pDev->Acceleration.Orientation.Roll;
-			int delta = iround(preview_frame.cols / 2 * tan((m_pDev->Acceleration.Orientation.Roll)* M_PI / 180.0f));
+			int pdelta = iround((preview_frame.rows / 2) * tan((m_pDev->Acceleration.Orientation.Pitch)* M_PI / 180.0f));
+			int rdelta = iround((preview_frame.cols / 2) * tan((m_pDev->Acceleration.Orientation.Roll)* M_PI / 180.0f));
 			cv::line(preview_frame,
-				cv::Point(0, preview_frame.rows / 2+delta),
-				cv::Point(preview_frame.cols, preview_frame.rows / 2-delta),
-				 cv::Scalar(255, 255, 255),
+				cv::Point(0, preview_frame.rows / 2 + rdelta + pdelta),
+				cv::Point(preview_frame.cols, preview_frame.rows / 2 - rdelta + pdelta),
+				cv::Scalar(80, 80, 80),
 				1);
 		}
 
@@ -236,7 +233,7 @@ reconnect:
 		cam_info.res_y = 768;
 		cam_info.fov = 56;
 #endif
-		f fx;
+		double fx;
 		cam_info.get_focal_length(fx);
 		if (success)
 		{

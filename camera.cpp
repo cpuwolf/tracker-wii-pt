@@ -4,7 +4,10 @@
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  */
-
+ /*
+ * copyright (c) 2017-2018 Wei Shuai <cpuwolf@gmail.com>
+ * WIImote support
+ */
 #include "camera.h"
 #include "compat/sleep.hpp"
 #include "compat/camera-names.hpp"
@@ -81,6 +84,7 @@ DEFUN_WARN_UNUSED Camera::result Camera::get_frame(cv::Mat& frame)
 
 DEFUN_WARN_UNUSED Camera::open_status Camera::start(int idx, int fps, int res_x, int res_y)
 {
+#if 0
     if (idx >= 0 && fps >= 0 && res_x >= 0 && res_y >= 0)
     {
         if (cam_desired.idx != idx ||
@@ -131,6 +135,9 @@ DEFUN_WARN_UNUSED Camera::open_status Camera::start(int idx, int fps, int res_x,
 
     stop();
     return open_error;
+#else
+	return open_ok_change;
+#endif
 }
 
 void Camera::stop()

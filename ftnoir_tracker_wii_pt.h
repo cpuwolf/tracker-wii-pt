@@ -5,7 +5,10 @@
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  */
-
+ /*
+ * copyright (c) 2017-2018 Wei Shuai <cpuwolf@gmail.com>
+ * WIImote support
+ */
 #pragma once
 
 #include "api/plugin-api.hpp"
@@ -74,7 +77,7 @@ private:
     QMutex camera_mtx;
     QMutex data_mtx;
     Camera       camera;
-    PointExtractor point_extractor;
+    //PointExtractor point_extractor;
     PointTracker   point_tracker;
 
     qshared<cv_video_widget> video_widget;

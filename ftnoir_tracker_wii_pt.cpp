@@ -119,7 +119,7 @@ reconnect:
 	while (!m_pDev->Connect(wiimote::FIRST_AVAILABLE)) {
 		if (commands & ABORT)
 			goto goodbye;
-		Beep(500, 20); Sleep(2000);
+		Beep(500, 20); Sleep(1500);
 		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
 		//draw wait text
 		cv::putText(preview_frame,

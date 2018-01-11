@@ -264,21 +264,7 @@ reconnect:
                 vec3 p = X_GH.t; // head (center?) position in global space
                 vec2 p_((p[0] * fx) / p[2], (p[1] * fx) / p[2]);  // projected to screen
 
-                static constexpr int len = 9;
-
-                cv::Point p2(iround(p_[0] * preview_frame.cols + preview_frame.cols/2),
-                             iround(-p_[1] * preview_frame.cols + preview_frame.rows/2));
-                static const cv::Scalar color(0, 255, 255);
-                cv::line(preview_frame,
-                         cv::Point(p2.x - len, p2.y),
-                         cv::Point(p2.x + len, p2.y),
-                         color,
-                         1);
-                cv::line(preview_frame,
-                         cv::Point(p2.x, p2.y - len),
-                         cv::Point(p2.x, p2.y + len),
-                         color,
-                         1);
+				fun(p_, cv::Scalar(0, 0, 255));
         }
 
 		if(image_up)

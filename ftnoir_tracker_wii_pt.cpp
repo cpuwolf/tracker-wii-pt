@@ -168,12 +168,15 @@ reconnect:
 				cv::Point(preview_frame.cols*m_pDev->BatteryPercent/100, 0),
 				(m_pDev->bBatteryDrained?cv::Scalar(255,0, 0): cv::Scalar(0, 80, 0)),
 				2);
-
-		//draw horizon
-		if(m_pDev->Nunchuk.Acceleration.Orientation.UpdateAge < 10)
 		{
-			int pdelta = iround((preview_frame.rows / 2) * tan((m_pDev->Acceleration.Orientation.Pitch)* M_PI / 180.0f));
-			int rdelta = iround((preview_frame.cols / 2) * tan((m_pDev->Acceleration.Orientation.Roll)* M_PI / 180.0f));
+			//draw horizon
+			static int pdelta = 0;
+			static int rdelta = 0;
+			if (m_pDev->Nunchuk.Acceleration.Orientation.UpdateAge < 10)
+			{
+				pdelta = iround((preview_frame.rows / 2) * tan((m_pDev->Acceleration.Orientation.Pitch)* M_PI / 180.0f));
+				rdelta = iround((preview_frame.cols / 2) * tan((m_pDev->Acceleration.Orientation.Roll)* M_PI / 180.0f));
+			}
 			cv::line(preview_frame,
 				cv::Point(0, preview_frame.rows / 2 + rdelta + pdelta),
 				cv::Point(preview_frame.cols, preview_frame.rows / 2 - rdelta + pdelta),

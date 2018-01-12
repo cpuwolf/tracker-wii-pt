@@ -177,7 +177,7 @@ reconnect:
 		cv::line(preview_frame,
 				cv::Point(0, 0),
 				cv::Point(preview_frame.cols*m_pDev->BatteryPercent/100, 0),
-				(m_pDev->bBatteryDrained?cv::Scalar(255,0, 0): cv::Scalar(0, 80, 0)),
+				(m_pDev->bBatteryDrained?cv::Scalar(255,0, 0): cv::Scalar(0, 140, 0)),
 				2);
 		{
 			//draw horizon
@@ -186,11 +186,11 @@ reconnect:
 			if (m_pDev->Nunchuk.Acceleration.Orientation.UpdateAge < 10)
 			{
 				pdelta = iround((preview_frame.rows / 2) * tan((m_pDev->Acceleration.Orientation.Pitch)* M_PI / 180.0f));
-				rdelta = iround((preview_frame.cols / 2) * tan((m_pDev->Acceleration.Orientation.Roll)* M_PI / 180.0f));
+				rdelta = iround((preview_frame.cols / 4 ) * tan((m_pDev->Acceleration.Orientation.Roll)* M_PI / 180.0f));
 			}
 			cv::line(preview_frame,
-				cv::Point(0, preview_frame.rows / 2 + rdelta + pdelta),
-				cv::Point(preview_frame.cols, preview_frame.rows / 2 - rdelta + pdelta),
+				cv::Point(0, preview_frame.rows / 2 + rdelta - pdelta),
+				cv::Point(preview_frame.cols, preview_frame.rows / 2 - rdelta - pdelta),
 				cv::Scalar(80, 80, 80),
 				1);
 		}
@@ -215,7 +215,7 @@ reconnect:
 				thinkness);
 		};
 
-		bool image_up = false;
+		bool image_up = true;
 		points.reserve(4);
 		points.clear();
 #ifndef WIIMOTE_SIMULATION
@@ -231,6 +231,9 @@ reconnect:
 				//vec2 dt((dot.RawX/1024.0f)-0.5f, ((-2.0f*dot.RawY)+768.0f)/(2.0f*1024.0f));
 				//anti-clockwise rotate
 				vec2 dt(((1024-dot.RawX) / 1024.0f) - 0.5f, ((-2.0f*(768-dot.RawY)) + 768.0f) / (2.0f*1024.0f));
+				//const int W = 1024;
+				//const int H = 768;
+				//vec2 dt((dot.RawX - W / 2) / W, -(dot.RawY - H / 2) / W);
 
 				points.push_back(dt);
 				if(dot_sizes)

@@ -91,6 +91,7 @@ void Tracker_WII_PT::on_state_change(wiimote &remote,
 	}
 }
 
+#define WIIMOTE_SIMULATION
 void Tracker_WII_PT::run() {
 
 	cv::setNumThreads(0);
@@ -114,6 +115,7 @@ void Tracker_WII_PT::run() {
 	char txtbuf[64];
 	sprintf(txtbuf, "%s", "wait for WIImote");
 
+#ifndef WIIMOTE_SIMULATION
 reconnect:
 	qDebug() << "wii wait";
 	while (!m_pDev->Connect(wiimote::FIRST_AVAILABLE)) {
@@ -140,9 +142,10 @@ reconnect:
 	
 
 	qDebug() << "wii connected";
-
+#endif // !WIIMOTE_SIMULATION
 	while ((commands & ABORT) == 0)
 	{
+#ifndef WIIMOTE_SIMULATION
 		while (m_pDev->RefreshState() == NO_CHANGE) {
 				Sleep(1); // don't hog the CPU if nothing changed
 		}
@@ -154,7 +157,8 @@ reconnect:
 		{
 			goto reconnect;
 		}
-	
+#endif // !WIIMOTE_SIMULATION
+
 		CamInfo cam_info;
 
 		get_cam_info(&cam_info);
@@ -162,6 +166,7 @@ reconnect:
 		//create preview video frame
 		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
 
+#ifndef WIIMOTE_SIMULATION
 		//draw battery status
 		cv::line(preview_frame,
 				cv::Point(0, 0),
@@ -183,7 +188,7 @@ reconnect:
 				cv::Scalar(80, 80, 80),
 				1);
 		}
-
+#endif // !WIIMOTE_SIMULATION
 		//define a temp draw function
 		auto fun = [&](const vec2& p, const cv::Scalar& color,int thinkness=1)
 		{
@@ -204,10 +209,12 @@ reconnect:
 				thinkness);
 		};
 
-		bool dot_sizes = (m_pDev->IR.Mode == wiimote_state::ir::EXTENDED);
-		bool image_up = true;
+		bool image_up = false;
 		points.reserve(4);
 		points.clear();
+#ifndef WIIMOTE_SIMULATION
+		bool dot_sizes = (m_pDev->IR.Mode == wiimote_state::ir::EXTENDED);
+
 
 		for (unsigned index = 0; index < 4; index++)
 		{
@@ -226,6 +233,7 @@ reconnect:
 					fun(dt, cv::Scalar(0, 255, 0));
 			}
 		}
+#endif // !WIIMOTE_SIMULATION
 		const bool success = points.size() >= PointModel::N_POINTS;
 		point_count = points.size();
 

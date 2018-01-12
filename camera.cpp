@@ -136,6 +136,15 @@ DEFUN_WARN_UNUSED Camera::open_status Camera::start(int idx, int fps, int res_x,
     stop();
     return open_error;
 #else
+	cam_desired.idx = idx;
+	cam_desired.fps = fps;
+	cam_desired.res_x = res_x;
+	cam_desired.res_y = res_y;
+	cam_desired.fov = fov;
+	cam_info.fps = 70;
+	cam_info.res_x = 1024;
+	cam_info.res_y = 768;
+	cam_info.fov = 40;
 	return open_ok_change;
 #endif
 }

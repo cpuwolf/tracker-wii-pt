@@ -39,7 +39,7 @@ Tracker_WII_PT::~Tracker_WII_PT()
     wait();
 
     QMutexLocker l(&camera_mtx);
-    //camera.stop();
+    camera.stop();
 }
 
 void Tracker_WII_PT::set_command(Command command)
@@ -160,8 +160,14 @@ reconnect:
 #endif // !WIIMOTE_SIMULATION
 
 		CamInfo cam_info;
+		bool new_frame = false;
 
-		get_cam_info(&cam_info);
+		{
+			QMutexLocker l(&camera_mtx);
+
+			if (likely(camera))
+				std::tie(new_frame, cam_info) = camera.get_frame(frame);
+		}
 
 		//create preview video frame
 		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
@@ -233,6 +239,19 @@ reconnect:
 					fun(dt, cv::Scalar(0, 255, 0));
 			}
 		}
+#else
+		Sleep(10); // don't hog the CPU if nothing changed
+		sprintf(txtbuf, "%s", "WIImote SIM");
+		//draw wait text
+		cv::putText(preview_frame,
+			txtbuf,
+			cv::Point(preview_frame.cols / 10, preview_frame.rows / 2),
+			cv::FONT_HERSHEY_SIMPLEX,
+			1,
+			cv::Scalar(255, 255, 255),
+			1);
+		image_up = true;
+		
 #endif // !WIIMOTE_SIMULATION
 		const bool success = points.size() >= PointModel::N_POINTS;
 		point_count = points.size();
@@ -296,7 +315,7 @@ goodbye:
 void Tracker_WII_PT::maybe_reopen_camera()
 {
     QMutexLocker l(&camera_mtx);
-#if 0
+#if 1
     Camera::open_status status = camera.start(camera_name_to_index(s.camera_name), s.cam_fps, s.cam_res_x, s.cam_res_y);
 
     switch (status)
@@ -306,7 +325,7 @@ void Tracker_WII_PT::maybe_reopen_camera()
     case Camera::open_ok_change:
 #endif
         frame = cv::Mat();
-#if 0
+#if 1
         break;
     case Camera::open_ok_no_change:
         break;

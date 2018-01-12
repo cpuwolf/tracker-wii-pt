@@ -91,7 +91,7 @@ void Tracker_WII_PT::on_state_change(wiimote &remote,
 	}
 }
 
-#define WIIMOTE_SIMULATION
+//#define WIIMOTE_SIMULATION
 void Tracker_WII_PT::run() {
 
 	cv::setNumThreads(0);
@@ -121,7 +121,7 @@ reconnect:
 	while (!m_pDev->Connect(wiimote::FIRST_AVAILABLE)) {
 		if (commands & ABORT)
 			goto goodbye;
-		Beep(500, 20); Sleep(1500);
+		Beep(500, 30); Sleep(1500);
 		cv::resize(blank_frame, preview_frame, cv::Size(preview_size.width(), preview_size.height()), 0, 0, cv::INTER_NEAREST);
 		//draw wait text
 		cv::putText(preview_frame,

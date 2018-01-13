@@ -230,10 +230,16 @@ reconnect:
 				image_up = true;
 				//vec2 dt((dot.RawX/1024.0f)-0.5f, ((-2.0f*dot.RawY)+768.0f)/(2.0f*1024.0f));
 				//anti-clockwise rotate
-				vec2 dt(((1024-dot.RawX) / 1024.0f) - 0.5f, ((-2.0f*(768-dot.RawY)) + 768.0f) / (2.0f*1024.0f));
-				//const int W = 1024;
-				//const int H = 768;
-				//vec2 dt((dot.RawX - W / 2) / W, -(dot.RawY - H / 2) / W);
+				//vec2 dt(((1024-dot.RawX) / 1024.0f) - 0.5f, ((-2.0f*(768-dot.RawY)) + 768.0f) / (2.0f*1024.0f));
+
+				const float W = 1024.0f;
+				const float H = 768.0f;
+				const float RX = W - dot.RawX;
+				const float RY = H - dot.RawY;
+				//vec2 dt((dot.RawX - W / 2.0f) / W, -(dot.RawY - H / 2.0f) / W);
+				//anti-clockwise rotate
+				vec2 dt((RX - W / 2.0f) / W, -(RY - H / 2.0f) / W);
+
 
 				points.push_back(dt);
 				if(dot_sizes)

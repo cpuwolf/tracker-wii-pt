@@ -36,6 +36,7 @@ void CamInfo::get_focal_length(double& fx) const
     fx = .5 / tan(fov_x * .5);
     //fy = .5 / tan(fov_y * .5);
     //static bool once = false; if (!once) { once = true; qDebug() << "f" << ret << "fov" << (fov * 180/M_PI); }
+	fx = 1;
 }
 
 DEFUN_WARN_UNUSED Camera::result Camera::get_info() const

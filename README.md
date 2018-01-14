@@ -1,6 +1,8 @@
 # tracker-wii-pt
 wiimote point tracker for opentrack
 
+![](https://github.com/cpuwolf/tracker-wii-pt/blob/v2.3.9/doc/wiimote_how.jpg)
+
 tracker-wii-pt is a submodule project for opentrack.
 
 https://github.com/opentrack/opentrack
